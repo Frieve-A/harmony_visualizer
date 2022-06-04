@@ -1,3 +1,5 @@
+import os
+import sys
 import math
 import time
 import pygame
@@ -84,9 +86,15 @@ def prepare_keyboard():
 def note_no_to_x(note_no):
     return keyboard_margin_x + 0.5 * key_width + (key_width * 7) / 12 * (note_no - 21) # 1 oct. lower
 
+def resource_path(relative_path):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
 def main():
     # initialization
     pygame.init()
+    pygame.display.set_icon(pygame.image.load(resource_path('icon_128x128.png')))
     screen = pygame.display.set_mode(screen_size)
     full_screen = False
 
