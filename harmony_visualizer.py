@@ -116,10 +116,46 @@ def main():
     terminated = False
     last_time = time.perf_counter() - 10
     harmony_radius = np.zeros(128)
+    mouse_click_note = -1
     while (not terminated):
         current_time = time.perf_counter()
         last_wait_ms = (current_time - last_time) * 1000
         last_time = current_time
+
+        # handle events
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                terminated = True
+            elif event.type == KEYDOWN:
+                if event.key == K_ESCAPE:
+                    terminated = True
+                elif event.key == K_F11:
+                    full_screen = not full_screen
+                    if full_screen:
+                        screen = pygame.display.set_mode(screen_size, FULLSCREEN)
+                    else:
+                        screen = pygame.display.set_mode(screen_size)
+                elif event.key == K_LCTRL or event.key == K_RCTRL:
+                    damper = True
+            elif event.type == KEYUP:
+                if event.key == K_LCTRL or event.key == K_RCTRL:
+                    damper = False
+            elif event.type == MOUSEBUTTONDOWN and event.button == 1:
+                for key in [key for key in keyboard[21:109] if key.black_key]:
+                    if event.pos[0] >= key.x - black_key_width / 2 and event.pos[0] < key.x + black_key_width / 2 and event.pos[1] >= keyboard_top and event.pos[1] < keyboard_top + black_key_height:
+                        mouse_click_note = key.note_no
+                if mouse_click_note < 0:
+                    for key in [key for key in keyboard[21:109] if not key.black_key]:
+                        if event.pos[0] >= key.x - white_key_width / 2 and event.pos[0] < key.x + white_key_width / 2 and event.pos[1] >= keyboard_top and event.pos[1] < keyboard_top + white_key_height:
+                            mouse_click_note = key.note_no
+                if mouse_click_note >= 0:
+                    keyboard[mouse_click_note].key_on = True
+                    keyboard[mouse_click_note].attack = 1.0
+                    keyboard[mouse_click_note].db = 96.0
+
+            elif event.type == MOUSEBUTTONUP and event.button == 1:
+                keyboard[mouse_click_note].key_on = False    
+                mouse_click_note = -1
 
         # midi in
         for midi_in in midi_ins:
@@ -140,6 +176,8 @@ def main():
                             if cc_no == 64: # damper
                                 damper = midi_event[0][2] > 0
                         # print(midi_event)
+
+        # mouse in
 
         # update keyboard status
         overtone_list = []
@@ -256,20 +294,7 @@ def main():
         # draw
         pygame.display.update()
 
-        # handle keyboard events
-        for event in pygame.event.get():
-            if event.type == QUIT:
-                terminated = True
-            elif event.type == KEYDOWN:
-                if event.key == K_ESCAPE:
-                    terminated = True
-                elif event.key == K_F11:
-                    full_screen = not full_screen
-                    if full_screen:
-                        screen = pygame.display.set_mode(screen_size, FULLSCREEN)
-                    else:
-                        screen = pygame.display.set_mode(screen_size)
-
+        # wait
         pygame.time.wait(10)
 
     for midi_in in midi_ins:
