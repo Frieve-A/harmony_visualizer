@@ -8,16 +8,20 @@ from pygame.locals import *
 import numpy as np
 
 app_title = 'Harmony visualizer'
-screen_size = (1920, 1080) # (3840, 2160)
+screen_size = (1920, 1080)
+#screen_size = (2560, 1440)
+#screen_size = (3840, 2160)
+line_width = screen_size[1] // 1081 + 1
+bold_line_width = line_width * 3
 base_size = screen_size[0] // 240 # 8 pixel in 1920 x 1080
 keyboard_margin_x = base_size * 3
 key_width = (screen_size[0] - keyboard_margin_x * 2) / 52
 keyboard_top = base_size * 100
 energy_bottom = keyboard_top - keyboard_margin_x
-white_key_width = key_width * 33 / 36 #22.5 / 23.5
-white_key_height = key_width * 150 / 23.5
-black_key_width = key_width * 23 / 36 #15 / 23.5
-black_key_height = key_width * 100 / 23.5
+white_key_width = round(key_width * 33 / 36) #22.5 / 23.5
+white_key_height = round(key_width * 150 / 23.5)
+black_key_width = round(key_width * 23 / 36) #15 / 23.5
+black_key_height = round(key_width * 100 / 23.5)
 min_note_no = 21
 max_note_no = 109.2 # max spectrum frequency in note no
 energy_width = (key_width * 7) / 12 - 2
@@ -36,7 +40,7 @@ tone_color = np.array([
     (160, 128, 224),
     (192, 128, 192),
     (224, 128, 160)
-])
+], dtype=np.int)
 
 def prepare_midi_ins():
     pygame.midi.init()
@@ -68,12 +72,12 @@ def prepare_keyboard():
         oct = i // 12 - 1
         note = i % 12
         black_key = note in [1, 3, 6, 8, 10]
-        x = keyboard_margin_x + key_width * (oct * 7 + [0.5, 0.925, 1.5, 2.075, 2.5, 3.5, 3.85, 4.5, 5, 5.5, 6.15, 6.5][note] - 5)
+        x = round(keyboard_margin_x + key_width * (oct * 7 + [0.5, 0.925, 1.5, 2.075, 2.5, 3.5, 3.85, 4.5, 5, 5.5, 6.15, 6.5][note] - 5))
         key= Key()
         key.note_no = i
         key.black_key = black_key
         key.x = x
-        key.normalized_x = keyboard_margin_x + 0.5 * key_width + (key_width * 7) / 12 * (i - 21)
+        key.normalized_x = round(keyboard_margin_x + 0.5 * key_width + (key_width * 7) / 12 * (i - 21))
         key.note_on = False # Whether there is a sound including the damper pedal
         key.key_on = False # Whether the keyboard is pressed
         key.db = 0.0 # Virtual volume in DBs
@@ -177,8 +181,6 @@ def main():
                                 damper = midi_event[0][2] > 0
                         # print(midi_event)
 
-        # mouse in
-
         # update keyboard status
         overtone_list = []
         harmony_buf = [[] for i in range(128)]
@@ -205,7 +207,7 @@ def main():
                         for harmony_note_no, harmony_overtone_index in harmony_buf[overtone_note_no]:
                             harmony_octave = harmony_overtone_index & (harmony_overtone_index - 1) == 0 
                             if key.note_no % 12 != harmony_note_no % 12 and harmony_note_no not in processed_note_no and (not octave or not harmony_octave):# ignore octave
-                                brightness = int(min(key.db, keyboard[harmony_note_no].db) - 60)
+                                brightness = min(key.db, keyboard[harmony_note_no].db) - 60
                                 keyboard[overtone_note_no].harmony = max(brightness, keyboard[overtone_note_no].harmony)
                                 if overtone_index > 1:
                                     harmony_list.append([key.note_no, overtone_index, brightness])
@@ -223,18 +225,18 @@ def main():
 
         # draw white keybed
         for key in [key for key in keyboard[21:109] if not key.black_key]:
-            pygame.draw.rect(screen, (255, 255, 255) if not key.note_on else tone_color[key.note_no % 12], Rect(key.x - white_key_width / 2, keyboard_top, white_key_width, white_key_height - key.attack * base_size // 2))
+            screen.fill((255, 255, 255) if not key.note_on else tone_color[key.note_no % 12], Rect(key.x - white_key_width // 2, keyboard_top, white_key_width, white_key_height - (base_size // 3 if key.attack > 0.0 else 0)))
         # draw black keybed
         for key in [key for key in keyboard[21:109] if key.black_key]:
-            pygame.draw.rect(screen, (0, 0, 0), Rect(key.x - black_key_width / 2, keyboard_top, black_key_width, black_key_height))
+            screen.fill((0, 0, 0), Rect(key.x - black_key_width // 2, keyboard_top, black_key_width, black_key_height))
             if key.note_on:
-                pygame.draw.rect(screen, tone_color[key.note_no % 12], Rect(key.x - black_key_width / 2 + 1, keyboard_top, black_key_width - 2, black_key_height - 1 - key.attack * base_size // 2))
+                screen.fill(tone_color[key.note_no % 12], Rect(key.x - black_key_width / 2 + line_width, keyboard_top, black_key_width - line_width * 2, black_key_height - line_width - (base_size // 3 if key.attack > 0.0 else 0)))
 
         # draw harmony volume
         for key in keyboard[21:109]:
             key.display_harmony = key.display_harmony * 0.05 + ((key.harmony + np.random.randn() * 6)* 0.95 if key.harmony > 0.0 else 0.0)
             if key.display_harmony > base_size:
-                pygame.draw.circle(screen, (160, 160, 160), (key.normalized_x + 1, energy_bottom + 1), key.display_harmony * base_size / 24, 2)
+                pygame.draw.circle(screen, (160, 160, 160), (key.normalized_x + 1, energy_bottom + 1), key.display_harmony * base_size / 24, line_width * 2)
 
         # draw harmony
         for i, (note_no, overtone_index, brightness) in enumerate(harmony_list):
@@ -242,13 +244,13 @@ def main():
             overtone_note_no = note_no + math.log(overtone_index) / math.log(2.0) * 12
             x2 = note_no_to_x(overtone_note_no)
             height = base_size * 4 + math.log(overtone_index) / math.log(2.0) * base_size * 20
-            color = tone_color[note_no % 12] * brightness // 36
+            color = (tone_color[note_no % 12] * brightness / 36).astype(np.int)
 
             point = []
             resolution = int(x2 - x1) // 6
             for i in range(resolution + 1):
                 point.append((x1 + (x2 - x1) * i / resolution, energy_bottom - math.sqrt(math.sin(i / resolution * 3.1415926)) * height))
-            pygame.draw.lines(screen, color, False, point, 1)
+            pygame.draw.lines(screen, color, False, point, line_width)
 
             # draw overtone_index
             if i >= len(harmony_list) - 16:
@@ -260,9 +262,9 @@ def main():
         for note_no, freq, energy, attack in overtone_list:
             height = (energy - 60.0) * base_size
             x = note_no_to_x(freq)
-            pygame.draw.line(screen, tone_color[note_no % 12], (x, energy_bottom - height), (x, energy_bottom), (3 * base_size) // 8 if attack > 0 else base_size // 8)
+            pygame.draw.line(screen, tone_color[note_no % 12], (x, energy_bottom - height), (x, energy_bottom), bold_line_width if attack > 0 else line_width)
 
-        # draw key center
+        # draw key center dot
         for key in keyboard[21:109]:
             pygame.draw.circle(screen, (255, 255, 255), (key.normalized_x + 1, energy_bottom + 1), (3 * base_size) // 8, 0)
 
@@ -270,8 +272,8 @@ def main():
         for i in range(6):
             x = math.sin(i / 12 * math.pi * 2.0) * polar_overtone_radius
             y = math.cos(i / 12 * math.pi * 2.0) * polar_overtone_radius
-            pygame.draw.line(screen, (64, 64, 64), (polar_overtone_center[0] + x, polar_overtone_center[1] - y), (polar_overtone_center[0] - x, polar_overtone_center[1] + y), base_size // 8)
-        pygame.draw.circle(screen, (96, 96, 96), polar_overtone_center, polar_overtone_radius, base_size // 8)
+            pygame.draw.line(screen, (64, 64, 64), (polar_overtone_center[0] + x, polar_overtone_center[1] - y), (polar_overtone_center[0] - x, polar_overtone_center[1] + y), line_width)
+        pygame.draw.circle(screen, (96, 96, 96), polar_overtone_center, polar_overtone_radius, line_width)
         for i in range(12):
             x = math.sin(i / 12 * math.pi * 2.0) * (polar_overtone_radius + base_size * 3)
             y = math.cos(i / 12 * math.pi * 2.0) * (polar_overtone_radius + base_size * 3)
