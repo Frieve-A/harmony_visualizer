@@ -23,7 +23,7 @@ Unzip the downloaded zip file and run the harmony_visualizer.exe to launch the a
 ## How to execute on other platforms
 
 This application is written in Python.
-Follow the steps below to execute the Python code of the Feature Visualizer.
+Follow the steps below to execute the Python code of the Harmony Visualizer.
 
 1. git clone https://github.com/Frieve-A/harmony_visualizer.git
 2. pip install -r requirements.txt
@@ -79,7 +79,7 @@ https://github.com/Frieve-A/harmony_visualizer/releases
 ## その他のプラットフォームで実行するには
 
 本アプリケーションはPythonで作成されています。
-以下の手順でFeature VisualizerのPythonコードを実行します。
+以下の手順でHarmony VisualizerのPythonコードを実行します。
 
 1. git clone https://github.com/Frieve-A/harmony_visualizer.git
 2. pip install -r requirements.txt
