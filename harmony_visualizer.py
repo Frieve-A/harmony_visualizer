@@ -40,7 +40,7 @@ tone_color = np.array([
     (160, 128, 224),
     (192, 128, 192),
     (224, 128, 160)
-], dtype=np.int)
+], dtype=np.int32)
 
 def prepare_midi_ins():
     pygame.midi.init()
@@ -169,11 +169,11 @@ def main():
                     if midi_event[0][0] % 16 != 9: # ignore ch 10
                         midi_event_type = midi_event[0][0] // 16
 
-                        if midi_event_type == 9: # note on
+                        if midi_event_type == 9 and midi_event[0][2] > 0: # note on
                             keyboard[midi_event[0][1]].key_on = True
                             keyboard[midi_event[0][1]].attack = 1.0
                             keyboard[midi_event[0][1]].db = max(math.log(midi_event[0][2] / 127) / math.log(2.0) * 6.0 + 96.0, keyboard[midi_event[0][1]].db)
-                        elif midi_event_type == 8: # note off
+                        elif midi_event_type == 8 or (midi_event_type == 9 and midi_event[0][2] == 0): # note off
                             keyboard[midi_event[0][1]].key_on = False
                         elif midi_event_type == 11:
                             cc_no = midi_event[0][1]
@@ -225,11 +225,11 @@ def main():
 
         # draw white keybed
         for key in [key for key in keyboard[21:109] if not key.black_key]:
-            screen.fill((255, 255, 255) if not key.note_on else tone_color[key.note_no % 12], Rect(key.x - white_key_width // 2, keyboard_top, white_key_width, white_key_height - (base_size // 3 if key.attack > 0.0 else 0)))
+            screen.fill((255, 255, 255) if not key.key_on else tone_color[key.note_no % 12], Rect(key.x - white_key_width // 2, keyboard_top, white_key_width, white_key_height - (base_size // 3 if key.attack > 0.0 else 0)))
         # draw black keybed
         for key in [key for key in keyboard[21:109] if key.black_key]:
             screen.fill((0, 0, 0), Rect(key.x - black_key_width // 2, keyboard_top, black_key_width, black_key_height))
-            if key.note_on:
+            if key.key_on:
                 screen.fill(tone_color[key.note_no % 12], Rect(key.x - black_key_width / 2 + line_width, keyboard_top, black_key_width - line_width * 2, black_key_height - line_width - (base_size // 3 if key.attack > 0.0 else 0)))
 
         # draw harmony volume
@@ -244,7 +244,7 @@ def main():
             overtone_note_no = note_no + math.log(overtone_index) / math.log(2.0) * 12
             x2 = note_no_to_x(overtone_note_no)
             height = base_size * 4 + math.log(overtone_index) / math.log(2.0) * base_size * 20
-            color = (tone_color[note_no % 12] * brightness / 36).astype(np.int)
+            color = (tone_color[note_no % 12] * brightness / 36).astype(np.int32)
 
             point = []
             resolution = int(x2 - x1) // 6
